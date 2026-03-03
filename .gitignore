@@ -1,0 +1,12 @@
+# clasp 設定（含 API token，不應放進 git）
+.clasprc.json
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# macOS
+.DS_Store
+
+# Node.js（若有）
+node_modules/
