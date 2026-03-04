@@ -180,6 +180,80 @@ function _getActiveTravelProject() {
   } catch (e) { return null; }
 }
 
+// ── [v8.1] 取得旅遊模式完整狀態（PWA 用）────────────
+function webGetTravelStatus(token) {
+  const username = CacheService.getScriptCache().get('web_' + token);
+  if (!username) return { success: false, error: '請重新登入' };
+  try {
+    const project = AppProps.getProperty('travel_project');
+    if (!project) return { success: true, active: false };
+
+    const endStr = AppProps.getProperty('travel_end');
+    const endDate = endStr ? new Date(endStr) : null;
+    if (endDate && endDate < new Date()) {
+      AppProps.deleteProperty('travel_project');
+      AppProps.deleteProperty('travel_end');
+      AppProps.deleteProperty('travel_budget');
+      AppProps.deleteProperty('travel_currency');
+      AppProps.deleteProperty('travel_rate');
+      return { success: true, active: false };
+    }
+
+    const daysLeft = endDate ? Math.max(0, Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24))) : null;
+    const endDateStr = endDate ? Utilities.formatDate(endDate, CONFIG.TIMEZONE, 'MM/dd') : null;
+    const currency = AppProps.getProperty('travel_currency') || null;
+    const rate = AppProps.getProperty('travel_rate') ? parseFloat(AppProps.getProperty('travel_rate')) : null;
+    const budget = parseInt(AppProps.getProperty('travel_budget') || '0');
+    const total = calculateProjectTotal(project);
+
+    return {
+      success: true,
+      active: true,
+      project,                          // e.g. "✈️ 日本"
+      destination: project.replace('✈️ ', ''),
+      endDate: endDateStr,
+      daysLeft,
+      currency,
+      rate,
+      budget,
+      total,
+      remaining: budget > 0 ? budget - total : null
+    };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ── [v8.1] 開啟旅遊模式（PWA 用，透過 AI 解析自然語言）──
+function webStartTravel(token, text) {
+  const username = CacheService.getScriptCache().get('web_' + token);
+  if (!username) return { success: false, error: '請重新登入' };
+  try {
+    const result = handleTravelStart(text);
+    if (result.status === 'travel_start') {
+      return { success: true, message: result.message };
+    }
+    return { success: false, error: result.message };
+  } catch (e) {
+    return { success: false, error: '開啟旅遊模式失敗：' + e.message };
+  }
+}
+
+// ── [v8.1] 結束旅遊模式（PWA 用）────────────────────
+function webEndTravel(token) {
+  const username = CacheService.getScriptCache().get('web_' + token);
+  if (!username) return { success: false, error: '請重新登入' };
+  try {
+    const result = handleTravelEnd();
+    if (result.status === 'travel_end') {
+      return { success: true, message: result.message };
+    }
+    return { success: false, error: result.message };
+  } catch (e) {
+    return { success: false, error: '結束旅遊模式失敗：' + e.message };
+  }
+}
+
 // ── 新增記帳（含卡別與重複偵測）──────────────────
 // skipDupCheck=true 時跳過重複偵測（使用者確認後強制新增）
 function webAddRecord(token, recordData, skipDupCheck) {

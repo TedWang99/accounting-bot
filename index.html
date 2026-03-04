@@ -1191,6 +1191,133 @@
       color: var(--text);
       margin-left: auto;
     }
+
+    /* Travel Mode Card */
+    .travel-card {
+      background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 12px;
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(245, 158, 11, .35);
+    }
+
+    .travel-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .travel-card-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .travel-card-dest {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .travel-card-meta {
+      font-size: 12px;
+      opacity: .85;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .travel-card-amounts {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, .3);
+    }
+
+    .travel-card-spent {
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .travel-card-budget {
+      font-size: 12px;
+      opacity: .85;
+      text-align: right;
+    }
+
+    .travel-bar-bg {
+      background: rgba(255, 255, 255, .3);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .travel-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: #fff;
+      transition: width .5s;
+    }
+
+    .travel-bar-fill.over {
+      background: #fde68a;
+    }
+
+    .btn-travel-end {
+      background: rgba(255, 255, 255, .25);
+      border: 1.5px solid rgba(255, 255, 255, .5);
+      color: #fff;
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn-travel-end:active {
+      background: rgba(255, 255, 255, .4);
+    }
+
+    /* Travel Mode Activate Sheet */
+    .travel-activate-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 0;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .travel-activate-row:last-child {
+      border-bottom: none;
+    }
+
+    .travel-activate-icon {
+      font-size: 24px;
+      width: 36px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .travel-activate-label {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .travel-activate-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
   </style>
 </head>
 
@@ -1392,6 +1519,36 @@
     </div>
   </div>
 
+  <!-- Travel Mode Bottom Sheet -->
+  <div class="overlay" id="travel-overlay"></div>
+  <div class="bottom-sheet" id="travel-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">✈️ 開啟旅遊模式</div>
+    <div class="sheet-body">
+      <div class="form-group">
+        <label>用自然語言描述旅程</label>
+        <input type="text" id="travel-input" placeholder="例：去日本 7 天，預算 3 萬" autocapitalize="none">
+      </div>
+      <div style="margin-bottom:14px">
+        <div
+          style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">
+          快速選擇</div>
+        <div style="display:flex;flex-wrap:wrap;gap:7px" id="travel-presets">
+          <button class="qa-chip" data-text="去日本 5 天">🇯🇵 日本 5天</button>
+          <button class="qa-chip" data-text="去日本 7 天，預算 3 萬">🇯🇵 日本 7天</button>
+          <button class="qa-chip" data-text="去韓國 5 天，預算 2 萬">🇰🇷 韓國 5天</button>
+          <button class="qa-chip" data-text="去泰國 7 天，預算 2.5 萬">🇹🇭 泰國 7天</button>
+          <button class="qa-chip" data-text="去歐洲 14 天，預算 10 萬">🇪🇺 歐洲 14天</button>
+        </div>
+      </div>
+      <div class="form-error" id="travel-error"></div>
+      <div class="sheet-actions">
+        <button class="btn btn-cancel" id="btn-travel-cancel">取消</button>
+        <button class="btn btn-save" id="btn-travel-start">🚀 出發！</button>
+      </div>
+    </div>
+  </div>
+
 
   <script>
     // ── State ──────────────────────────────────────
@@ -1415,8 +1572,8 @@
       trendData: null,
       pieChart: null,
       trendChart: null,
-      calView: false,    // 是否顯示日曆
-      calDay: null       // 選中的日期 (MM/dd 格式)
+      calView: false, // 是否顯示日曆
+      calDay: null // 選中的日期 (MM/dd 格式)
     };
 
     // ── Helpers ─────────────────────────────────────
@@ -1558,17 +1715,26 @@
       $('dashboard-content').innerHTML = '<div class="empty-state">載入資料中…</div>';
       S.filterKw = ''; S.filterCat = ''; S.filterPerson = ''; S.filterProject = ''; S.calDay = null;
       try {
-        const res = await run('webGetMonthData', S.token, S.year, S.month);
-        if (!res.success) { $('dashboard-content').innerHTML = `<div class="empty-state">❌ ${res.error}</div>`; return; }
+        // 同時取得帳目資料和旅遊狀態
+        const [res, travelRes] = await Promise.all([
+          run('webGetMonthData', S.token, S.year, S.month),
+          run('webGetTravelStatus', S.token).catch(() => ({ success: true, active: false }))
+        ]);
+        if (!res.success) {
+          $('dashboard-content').innerHTML = `<div class="empty-state">❌ ${res.error}</div>`;
+          return;
+        }
         S.data = res;
-        $('dashboard-content').innerHTML = buildDashboardHTML(res);
+        S.travel = (travelRes && travelRes.active) ? travelRes : null;
+        $('dashboard-content').innerHTML = buildDashboardHTML(res, S.travel);
         bindFilterEvents();
         renderPieChart(res.categoryBreakdown);
         if (S.chartMode === 'trend') loadTrendChart();
+        bindTravelCardEvent();
       } catch (e) { $('dashboard-content').innerHTML = '<div class="empty-state">❌ 載入失敗，請重試</div>'; }
     }
 
-    function buildDashboardHTML(d) {
+    function buildDashboardHTML(d, travel) {
       const { summary, categoryBreakdown } = d;
       const pct = Math.min(100, Math.round(summary.totalExpense / summary.budget * 100));
       const isOver = summary.totalExpense > summary.budget;
@@ -1577,40 +1743,96 @@
       // Category options for filter
       const catOptions = categoryBreakdown.map(c => `<option value="${c.category}">${c.category}</option>`).join('');
 
-      let h = `
-  <div class="summary-card">
-    <div class="summary-row">
-      <div><div class="summary-label">本月支出</div><div class="summary-val red">$${fmt(summary.totalExpense)}</div></div>
-      <div style="text-align:right"><div class="summary-label">共 ${summary.count} 筆</div>
-        ${summary.totalIncome > 0 ? `<div style="font-size:13px;color:var(--green);margin-top:2px">回饋 $${fmt(summary.totalIncome)}</div>` : ''}
+      // ── 旅遊模式卡片 ── (v8.1)
+      let h = '';
+      if (travel && travel.active) {
+        const tPct = travel.budget > 0 ? Math.min(100, Math.round(travel.total / travel.budget * 100)) : null;
+        const tOver = travel.budget > 0 && travel.total > travel.budget;
+        const tRemaining = travel.budget > 0 ? travel.budget - travel.total : null;
+        const currStr = travel.currency ? ` ｜ ${travel.currency} 匯率 ${travel.rate}` : '';
+        h += `
+    <div class="travel-card" id="travel-card">
+      <div class="travel-card-header">
+        <div class="travel-card-title">✈️ 旅遊模式進行中</div>
+        <button class="btn-travel-end" id="btn-travel-end">結束旅遊</button>
       </div>
-    </div>
-    <div class="budget-bar-bg"><div class="budget-bar-fill${isOver ? ' over' : ''}" style="width:${pct}%"></div></div>
-    <div class="budget-text"><span>預算 $${fmt(summary.budget)}</span><span style="color:${isOver ? '#ef4444' : '#22c55e'}">${isOver ? '超支' : '剩餘'} $${fmt(Math.abs(rem))}</span></div>
-  </div>`;
+      <div class="travel-card-dest">${travel.destination}</div>
+      <div class="travel-card-meta">
+        <span>🗓️ 結束 ${travel.endDate || '—'}</span>
+        <span>⏳ 剩 ${travel.daysLeft !== null ? travel.daysLeft : '—'} 天</span>
+        ${currStr ? `<span>💱${currStr}</span>` : ''}
+      </div>
+      <div class="travel-card-amounts">
+        <div>
+          <div style="font-size:12px;opacity:.8;margin-bottom:2px">累計花費</div>
+          <div class="travel-card-spent">$${fmt(travel.total)}</div>
+        </div>
+        ${travel.budget > 0 ? `
+        <div class="travel-card-budget">
+          <div>預算 $${fmt(travel.budget)}</div>
+          <div style="color:${tOver ? '#fde68a' : 'rgba(255,255,255,.9)'}">${tOver ? '⚠️ 超支' : '剩餘'} $${fmt(Math.abs(tRemaining))}</div>
+        </div>` : ''}
+      </div>
+      ${tPct !== null ? `
+      <div class="travel-bar-bg" style="margin-top:8px">
+        <div class="travel-bar-fill${tOver ? ' over' : ''}" style="width:${tPct}%"></div>
+      </div>` : ''}
+    </div>`;
+      } else {
+        h += `
+    <div style="text-align:right;margin-bottom:6px">
+      <button id="btn-open-travel" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:4px 0">✈️ 開啟旅遊模式</button>
+    </div>`;
+      }
+
+      h += `
+    <div class="summary-card">
+      <div class="summary-row">
+        <div>
+          <div class="summary-label">本月支出</div>
+          <div class="summary-val red">$${fmt(summary.totalExpense)}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="summary-label">共 ${summary.count} 筆</div>
+          ${summary.totalIncome > 0 ? `<div style="font-size:13px;color:var(--green);margin-top:2px">回饋
+            $${fmt(summary.totalIncome)}</div>` : ''}
+        </div>
+      </div>
+      <div class="budget-bar-bg">
+        <div class="budget-bar-fill${isOver ? ' over' : ''}" style="width:${pct}%"></div>
+      </div>
+      <div class="budget-text"><span>預算 $${fmt(summary.budget)}</span><span
+          style="color:${isOver ? '#ef4444' : '#22c55e'}">${isOver ? '超支' : '剩餘'} $${fmt(Math.abs(rem))}</span></div>
+    </div>`;
 
       // Charts
       h += `
-  <div class="section-title">圖表分析 <span class="section-toggle" id="chart-toggle-btn">${S.chartMode === 'pie' ? '切換趨勢圖' : '切換圓餅圖'}</span></div>
-  <div class="charts-card">
-    <div class="chart-tabs">
-      <button class="chart-tab${S.chartMode === 'pie' ? ' active' : ''}" id="tab-pie">🥧 分類圓餅</button>
-      <button class="chart-tab${S.chartMode === 'trend' ? ' active' : ''}" id="tab-trend">📈 月份趨勢</button>
-    </div>
-    <div class="chart-container" id="chart-wrap">
-      <canvas id="myChart"></canvas>
-    </div>
-  </div>`;
+    <div class="section-title">圖表分析 <span class="section-toggle" id="chart-toggle-btn">${S.chartMode === 'pie' ? '切換趨勢圖'
+          : '切換圓餅圖'}</span></div>
+    <div class="charts-card">
+      <div class="chart-tabs">
+        <button class="chart-tab${S.chartMode === 'pie' ? ' active' : ''}" id="tab-pie">🥧 分類圓餅</button>
+        <button class="chart-tab${S.chartMode === 'trend' ? ' active' : ''}" id="tab-trend">📈 月份趨勢</button>
+      </div>
+      <div class="chart-container" id="chart-wrap">
+        <canvas id="myChart"></canvas>
+      </div>
+    </div>`;
 
       // Category breakdown
       if (categoryBreakdown.length > 0) {
         const maxAmt = categoryBreakdown[0].amount;
-        h += `<div class="section-title">分類統計</div><div class="cat-list">`;
+        h += `<div class="section-title">分類統計</div>
+    <div class="cat-list">`;
         categoryBreakdown.forEach(c => {
           const w = Math.round(c.amount / maxAmt * 100);
           h += `<div class="cat-item">
         <div class="cat-name">${c.category}</div>
-        <div class="cat-bar-wrap"><div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${w}%"></div></div></div>
+        <div class="cat-bar-wrap">
+          <div class="cat-bar-bg">
+            <div class="cat-bar-fill" style="width:${w}%"></div>
+          </div>
+        </div>
         <div class="cat-amt">$${fmt(c.amount)}</div>
       </div>`;
         });
@@ -1619,25 +1841,112 @@
 
       // Filter bar
       h += `
-  <div class="section-title" style="display:flex;align-items:center;gap:6px">
-    明細（<span id="record-count">${d.records.length}</span> 筆）
-    <span class="section-toggle" onclick="exportCSV()">📤 匯出 CSV</span>
-    <button id="btn-batch-toggle" class="btn-batch-mode">選取</button>
-    <button class="view-toggle-btn" id="btn-cal-toggle">${S.calView ? '📋 列表' : '📅 日曆'}</button>
-  </div>
-  <div class="filter-bar">
-    <input type="text" id="filter-kw" placeholder="🔍 搜尋品名…" value="${S.filterKw}">
-    <select id="filter-cat"><option value="">全部分類</option>${catOptions}</select>
-    <select id="filter-person"><option value="">全部成員</option></select>
-    <select id="filter-project"><option value="">全部專案</option></select>
-  </div>
-  <div id="records-wrap"></div>`;
+    <div class="section-title" style="display:flex;align-items:center;gap:6px">
+      明細（<span id="record-count">${d.records.length}</span> 筆）
+      <span class="section-toggle" onclick="exportCSV()">📤 匯出 CSV</span>
+      <button id="btn-batch-toggle" class="btn-batch-mode">選取</button>
+      <button class="view-toggle-btn" id="btn-cal-toggle">${S.calView ? '📋 列表' : '📅 日曆'}</button>
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="filter-kw" placeholder="🔍 搜尋品名…" value="${S.filterKw}">
+      <select id="filter-cat">
+        <option value="">全部分類</option>${catOptions}
+      </select>
+      <select id="filter-person">
+        <option value="">全部成員</option>
+      </select>
+      <select id="filter-project">
+        <option value="">全部專案</option>
+      </select>
+    </div>
+    <div id="records-wrap"></div>`;
 
       return h;
     }
 
+    // ── [v8.1] Travel Mode ─────────────────────────
+    function bindTravelCardEvent() {
+      const endBtn = $('btn-travel-end');
+      if (endBtn) {
+        endBtn.addEventListener('click', async () => {
+          if (!confirm('確定要結束旅遊模式嗎？')) return;
+          endBtn.disabled = true;
+          endBtn.textContent = '結束中…';
+          try {
+            const res = await run('webEndTravel', S.token);
+            if (res.success) {
+              toast('🏠 旅遊模式已結束！');
+              renderDashboard();
+            } else {
+              toast('❌ ' + (res.error || '結束失敗'));
+              endBtn.disabled = false;
+              endBtn.textContent = '結束旅遊';
+            }
+          } catch (e) {
+            toast('❌ 連線錯誤');
+            endBtn.disabled = false;
+            endBtn.textContent = '結束旅遊';
+          }
+        });
+      }
+      const openBtn = $('btn-open-travel');
+      if (openBtn) openBtn.addEventListener('click', openTravelSheet);
+    }
+
+    function openTravelSheet() {
+      $('travel-input').value = '';
+      $('travel-error').textContent = '';
+      $('travel-sheet').classList.add('show');
+      $('travel-overlay').classList.add('show');
+      setTimeout(() => $('travel-input').focus(), 300);
+    }
+
+    function closeTravelSheet() {
+      $('travel-sheet').classList.remove('show');
+      $('travel-overlay').classList.remove('show');
+    }
+
+    $('travel-overlay').addEventListener('click', closeTravelSheet);
+    $('btn-travel-cancel').addEventListener('click', closeTravelSheet);
+
+    // 快速選擇 preset chips
+    document.querySelectorAll('#travel-presets .qa-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        $('travel-input').value = btn.dataset.text;
+        $('travel-input').focus();
+      });
+    });
+
+    $('btn-travel-start').addEventListener('click', async () => {
+      const text = $('travel-input').value.trim();
+      if (!text) { $('travel-error').textContent = '請輸入旅遊描述'; return; }
+      $('btn-travel-start').disabled = true;
+      $('btn-travel-start').textContent = 'AI 解析中…';
+      $('travel-error').textContent = '';
+      try {
+        const res = await run('webStartTravel', S.token, text);
+        if (res.success) {
+          closeTravelSheet();
+          toast('✈️ 旅遊模式已開啟！');
+          renderDashboard();
+        } else {
+          $('travel-error').textContent = res.error || '開啟失敗，請稍後再試';
+        }
+      } catch (e) {
+        $('travel-error').textContent = '連線錯誤，請稍後再試';
+      } finally {
+        $('btn-travel-start').disabled = false;
+        $('btn-travel-start').textContent = '🚀 出發！';
+      }
+    });
+
+    $('travel-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') $('btn-travel-start').click();
+    });
+
     function bindFilterEvents() {
-      const kwEl = $('filter-kw'), catEl = $('filter-cat'), personEl = $('filter-person'), projectEl = $('filter-project');
+      const kwEl = $('filter-kw'), catEl = $('filter-cat'), personEl = $('filter-person'), projectEl =
+        $('filter-project');
       if (!kwEl) return;
       kwEl.addEventListener('input', () => { S.filterKw = kwEl.value.toLowerCase(); renderRecords(); });
       catEl.addEventListener('change', () => { S.filterCat = catEl.value; renderRecords(); });
@@ -1678,8 +1987,13 @@
       if (batchToggle) batchToggle.addEventListener('click', toggleBatchMode);
 
       const tabPie = $('tab-pie'), tabTrend = $('tab-trend');
-      tabPie && tabPie.addEventListener('click', () => { S.chartMode = 'pie'; switchChartTab(); renderPieChart(S.data.categoryBreakdown); });
-      tabTrend && tabTrend.addEventListener('click', () => { S.chartMode = 'trend'; switchChartTab(); loadTrendChart(); });
+      tabPie && tabPie.addEventListener('click', () => {
+        S.chartMode = 'pie'; switchChartTab();
+        renderPieChart(S.data.categoryBreakdown);
+      });
+      tabTrend && tabTrend.addEventListener('click', () => {
+        S.chartMode = 'trend'; switchChartTab(); loadTrendChart();
+      });
 
       if (S.calView) renderCalendar();
       else renderRecords();
@@ -1709,13 +2023,11 @@
         html += `<div class="cal-header-cell">${d}</div>`;
       });
       // 空白格
-      for (let i = 0; i < firstDay; i++) html += '<div class="cal-cell"></div>';
-      for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${String(S.month).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
-        const amt = dayMap[dateStr] || 0;
-        const isToday = (S.year === today.getFullYear() && dateStr === todayStr);
-        const isSelected = S.calDay === dateStr;
-        const isHigh = amt > 5000;
+      for (let i = 0; i < firstDay; i++) html += '<div class="cal-cell"></div>'; for (let day = 1; day <= daysInMonth;
+        day++) {
+        const dateStr = `${String(S.month).padStart(2, '0')}/${String(day).padStart(2, '0')}`; const
+          amt = dayMap[dateStr] || 0; const isToday = (S.year === today.getFullYear() && dateStr === todayStr); const
+            isSelected = S.calDay === dateStr; const isHigh = amt > 5000;
         let cls = 'cal-cell';
         if (amt > 0) cls += ' has-data';
         if (isToday) cls += ' today';
@@ -1723,7 +2035,8 @@
         if (isHigh) cls += ' high';
         html += `<div class="${cls}" data-date="${dateStr}">
           <span class="cal-day">${day}</span>
-          ${amt > 0 ? `<span class="cal-amt">$${Math.round(amt / 100) * 100 >= 1000 ? (Math.round(amt / 1000)) + 'k' : Math.round(amt)}</span>` : ''}
+          ${amt > 0 ? `<span class="cal-amt">$${Math.round(amt / 100) * 100 >= 1000 ? (Math.round(amt / 1000)) + 'k' :
+            Math.round(amt)}</span>` : ''}
         </div>`;
       }
       html += '</div>';
@@ -1733,16 +2046,20 @@
         html += `<div style="font-size:13px;color:var(--muted);padding:4px 0 8px">${S.calDay} 的明細</div>`;
         html += `<div class="records-list">${dayRecords.map(r => {
           const cardBadge = r.card ? `・${r.card}` : '';
-          return `<div class="record-item" data-row="${r.rowIndex}" data-item="${escHtml(r.item)}" data-amount="${r.amount}" data-payment="${escHtml(r.payment)}" data-category="${escHtml(r.category)}" data-card="${escHtml(r.card)}" data-date="${S.year}-${r.date.replace('/', '-')}" data-person="${escHtml(r.person)}">
-            <div class="record-date">${r.date}</div>
-            <div class="record-info">
-              <div class="record-item-name">${escHtml(r.item)}</div>
-              <div class="record-meta">${r.category}・${r.payment}${cardBadge}・${r.person}</div>
-            </div>
-            <div class="record-amount ${r.amount < 0 ? 'neg' : 'pos'}">${r.amount < 0 ? '-' : ''}$${fmt(Math.abs(r.amount))}</div>
+          return `<div class="record-item" data-row="${r.rowIndex}" data-item="${escHtml(r.item)}" data-amount="${r.amount}"
+        data-payment="${escHtml(r.payment)}" data-category="${escHtml(r.category)}" data-card="${escHtml(r.card)}"
+        data-date="${S.year}-${r.date.replace('/', '-')}" data-person="${escHtml(r.person)}">
+        <div class="record-date">${r.date}</div>
+        <div class="record-info">
+          <div class="record-item-name">${escHtml(r.item)}</div>
+          <div class="record-meta">${r.category}・${r.payment}${cardBadge}・${r.person}</div>
+        </div>
+        <div class="record-amount ${r.amount < 0 ? 'neg' : 'pos'}">${r.amount < 0 ? '-' : ''
+            }$${fmt(Math.abs(r.amount))}</div>
             <button class="record-del" data-row="${r.rowIndex}" onclick="event.stopPropagation()">🗑</button>
-          </div>`;
-        }).join('')}</div>`;
+        </div>`;
+        }).join('')}
+      </div>`;
       }
       wrap.innerHTML = html;
       // 綁定日期 click
@@ -1782,22 +2099,27 @@
       // store filtered for select-all
       S._filteredRows = filtered.map(r => r.rowIndex);
       countEl && (countEl.textContent = filtered.length);
-      if (filtered.length === 0) { wrap.innerHTML = `<div class="empty-state">📫 ${kw || cat || person || proj ? '無符合結果' : '本月尚無記帳資料'}</div>`; return; }
+      if (filtered.length === 0) {
+        wrap.innerHTML = `<div class="empty-state">📫 ${kw || cat || person || proj ? '無符合結果'
+          : '本月尚無記帳資料'}</div>`; return;
+      }
       wrap.innerHTML = `<div class="records-list${S.batchMode ? ' batch-active' : ''}">${filtered.map(r => {
-        const isNeg = r.amount < 0;
-        const cardBadge = r.card ? `・${r.card}` : '';
-        const isSelected = S.selectedRows.has(r.rowIndex);
-        const fullDate = `${S.year}-${r.date.replace('/', '-')}`;
-        return `<div class="record-item${isSelected ? ' selected' : ''}" data-row="${r.rowIndex}" data-item="${escHtml(r.item)}" data-amount="${r.amount}" data-payment="${escHtml(r.payment)}" data-category="${escHtml(r.category)}" data-card="${escHtml(r.card)}" data-date="${fullDate}" data-person="${escHtml(r.person)}">
-      <input type="checkbox" class="record-check" data-row="${r.rowIndex}"${isSelected ? ' checked' : ''}>
-      <div class="record-date">${r.date}</div>
-      <div class="record-info">
-        <div class="record-item-name">${escHtml(r.item)}</div>
-        <div class="record-meta">${r.category}・${r.payment}${cardBadge}・${r.person}</div>
-      </div>
-      <div class="record-amount ${isNeg ? 'neg' : 'pos'}">${isNeg ? '-' : ''}$${fmt(Math.abs(r.amount))}</div>
-      ${S.batchMode ? '' : `<button class="record-del" data-row="${r.rowIndex}" onclick="event.stopPropagation()">🗑</button>`}
-    </div>`;
+        const isNeg = r.amount < 0; const cardBadge = r.card ? `・${r.card}` : ''; const
+          isSelected = S.selectedRows.has(r.rowIndex); const fullDate = `${S.year}-${r.date.replace('/', '-')}`; return
+        `<div class="record-item${isSelected ? ' selected' : ''}" data-row="${r.rowIndex}"
+          data-item="${escHtml(r.item)}" data-amount="${r.amount}" data-payment="${escHtml(r.payment)}"
+          data-category="${escHtml(r.category)}" data-card="${escHtml(r.card)}" data-date="${fullDate}"
+          data-person="${escHtml(r.person)}">
+          <input type="checkbox" class="record-check" data-row="${r.rowIndex}" ${isSelected ? ' checked' : ''}>
+          <div class="record-date">${r.date}</div>
+          <div class="record-info">
+            <div class="record-item-name">${escHtml(r.item)}</div>
+            <div class="record-meta">${r.category}・${r.payment}${cardBadge}・${r.person}</div>
+          </div>
+          <div class="record-amount ${isNeg ? 'neg' : 'pos'}">${isNeg ? '-' : ''}$${fmt(Math.abs(r.amount))}</div>
+          ${S.batchMode ? '' : `<button class="record-del" data-row="${r.rowIndex}"
+            onclick="event.stopPropagation()">🗑</button>`}
+      </div>`;
       }).join('')}</div>`;
 
       // Bind events
@@ -1819,7 +2141,10 @@
       });
     }
 
-    function escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function escHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g,
+        '&gt;').replace(/"/g, '&quot;');
+    }
 
     // ── Charts ───────────────────────────────────────
     function renderPieChart(breakdown) {
@@ -1834,7 +2159,17 @@
           labels: breakdown.map(c => c.category),
           datasets: [{ data: breakdown.map(c => c.amount), backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } } }
+        options: {
+          responsive: true, maintainAspectRatio: false, plugins: {
+            legend: {
+              position: 'right', labels: {
+                font: {
+                  size: 11
+                }, boxWidth: 12
+              }
+            }
+          }
+        }
       });
     }
 
@@ -1848,7 +2183,10 @@
         try {
           const res = await run('webGetYearSummary', S.token, S.year);
           if (res.success) S.trendData = res.monthlyTotals;
-          else { canvas.parentElement.innerHTML = `<div style="text-align:center;color:var(--muted);padding:40px">載入失敗</div>`; return; }
+          else {
+            canvas.parentElement.innerHTML = `<div style="text-align:center;color:var(--muted);padding:40px">載入失敗</div>`;
+            return;
+          }
         } catch (e) { return; }
       }
 
@@ -1857,12 +2195,18 @@
         type: 'bar',
         data: {
           labels,
-          datasets: [{ label: `${S.year}年月支出`, data: S.trendData, backgroundColor: labels.map((_, i) => i === S.month - 1 ? '#2563eb' : '#93c5fd'), borderRadius: 6 }]
+          datasets: [{
+            label: `${S.year}年月支出`, data: S.trendData, backgroundColor: labels.map((_, i) => i === S.month - 1 ?
+              '#2563eb' : '#93c5fd'), borderRadius: 6
+          }]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + (v / 1000).toFixed(0) + 'k', font: { size: 11 } } }, x: { ticks: { font: { size: 11 } } } }
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: v => '$' + (v / 1000).toFixed(0) + 'k', font: { size: 11 } } },
+            x: { ticks: { font: { size: 11 } } }
+          }
         }
       });
     }
@@ -1945,7 +2289,10 @@
         card: $('edit-card').value,
         person: $('edit-person').value
       };
-      if (!data.item || isNaN(data.amount)) { $('edit-error').textContent = '品名與金額不可空白'; $('btn-edit-save').disabled = false; return; }
+      if (!data.item || isNaN(data.amount)) {
+        $('edit-error').textContent = '品名與金額不可空白'; $('btn-edit-save').disabled =
+          false; return;
+      }
       try {
         const res = await run('webEditRecord', S.token, S.editRowIndex, data);
         if (res.success) { toast('✅ 修改成功'); closeSheet(); renderDashboard(); }
@@ -2059,7 +2406,7 @@
         S.itemizedItems = (d.items || []).map(it => ({
           name: it.name || '',
           price_twd: parseFloat(it.price_twd) || 0,
-          price_original: it.price_original,  // 保留原幣金額
+          price_original: it.price_original, // 保留原幣金額
           category: it.category || '',
           included: true
         }));
@@ -2085,10 +2432,12 @@
         const tr = document.createElement('tr');
         tr.className = 'item-row' + (item.included ? '' : ' excluded');
         tr.innerHTML = `
-          <td><input type="checkbox" class="item-check" data-idx="${idx}" ${item.included ? 'checked' : ''}></td>
-          <td class="item-name-cell"><span class="item-name-text" data-idx="${idx}">${escHtml(item.name)}</span></td>
-          <td><span class="item-amt${item.price_twd < 0 ? ' negative' : ''}">${item.price_twd < 0 ? '-' : ''}$${Math.abs(Math.round(item.price_twd)).toLocaleString('zh-TW')}</span></td>
-          <td><span class="item-tag" data-idx="${idx}">${escHtml(item.category)}</span></td>`;
+    <td><input type="checkbox" class="item-check" data-idx="${idx}" ${item.included ? 'checked' : ''}></td>
+    <td class="item-name-cell"><span class="item-name-text" data-idx="${idx}">${escHtml(item.name)}</span></td>
+    <td><span class="item-amt${item.price_twd < 0 ? ' negative' : ''}">${item.price_twd < 0 ? '-' : ''
+          }$${Math.abs(Math.round(item.price_twd)).toLocaleString('zh-TW')}</span>
+    </td>
+    <td><span class="item-tag" data-idx="${idx}">${escHtml(item.category)}</span></td>`;
         tbody.appendChild(tr);
       });
       $('items-count-label').textContent = `共 ${count} 筆`;
@@ -2180,21 +2529,22 @@
       if (!banner) {
         banner = document.createElement('div');
         banner.id = 'items-dup-banner';
-        banner.style.cssText = 'background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;font-size:13px;color:#92400e;margin:12px 16px;';
+        banner.style.cssText = 'background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:12px
+        14px; font - size: 13px; color:#92400e; margin: 12px 16px; ';
         $('itemized-content').insertBefore(banner, $('item-table'));
       }
       banner.innerHTML = `
-        ⚠️ <strong>${store}</strong> 在同一天已有 <strong>${existingCount} 筆</strong>明細記錄，疑似重複掃描！<br>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button onclick="document.getElementById('items-dup-banner').style.display='none'"
-            style="flex:1;padding:9px;border-radius:8px;border:1px solid #f59e0b;background:#fff;cursor:pointer;font-size:13px">
-            取消
-          </button>
-          <button onclick="saveItemizedReceipt(true)"
-            style="flex:2;padding:9px;border-radius:8px;border:none;background:#f59e0b;color:#fff;cursor:pointer;font-size:13px;font-weight:700">
-            確認仍要新增
-          </button>
-        </div>`;
+    ⚠️ <strong>${store}</strong> 在同一天已有 <strong>${existingCount} 筆</strong>明細記錄，疑似重複掃描！<br>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="document.getElementById('items-dup-banner').style.display='none'"
+        style="flex:1;padding:9px;border-radius:8px;border:1px solid #f59e0b;background:#fff;cursor:pointer;font-size:13px">
+        取消
+      </button>
+      <button onclick="saveItemizedReceipt(true)"
+        style="flex:2;padding:9px;border-radius:8px;border:none;background:#f59e0b;color:#fff;cursor:pointer;font-size:13px;font-weight:700">
+        確認仍要新增
+      </button>
+    </div>`;
       banner.style.display = 'block';
       banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
@@ -2324,7 +2674,9 @@
       $('btn-scan-receipt').disabled = true;
       clearDupWarning();
       try {
-        const imagesData = await Promise.all(files.map(async f => ({ mimeType: 'image/jpeg', data: await compressImage(f) })));
+        const imagesData = await Promise.all(files.map(async f => ({
+          mimeType: 'image/jpeg', data: await compressImage(f)
+        })));
         const res = files.length > 1
           ? await run('webScanReceiptMulti', S.token, imagesData)
           : await run('webScanReceipt', S.token, imagesData[0].data, 'image/jpeg');
