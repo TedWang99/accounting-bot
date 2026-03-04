@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 
 <head>
@@ -1749,7 +1749,7 @@
         const tPct = travel.budget > 0 ? Math.min(100, Math.round(travel.total / travel.budget * 100)) : null;
         const tOver = travel.budget > 0 && travel.total > travel.budget;
         const tRemaining = travel.budget > 0 ? travel.budget - travel.total : null;
-        const currStr = travel.currency ? ` ｜ ${travel.currency} 匯率 ${travel.rate}` : '';
+        const currStr = travel.currency ? ' | ' + travel.currency + ' 匯率 ' + travel.rate : '';
         h += `
     <div class="travel-card" id="travel-card">
       <div class="travel-card-header">
@@ -1758,8 +1758,8 @@
       </div>
       <div class="travel-card-dest">${travel.destination}</div>
       <div class="travel-card-meta">
-        <span>🗓️ 結束 ${travel.endDate || '—'}</span>
-        <span>⏳ 剩 ${travel.daysLeft !== null ? travel.daysLeft : '—'} 天</span>
+        <span>&#x1F5D3; 結束 ${travel.endDate || '-'}</span>
+        <span>&#x23F3; 剩 ${travel.daysLeft !== null ? travel.daysLeft : '-'} 天</span>
         ${currStr ? `<span>💱${currStr}</span>` : ''}
       </div>
       <div class="travel-card-amounts">
@@ -1770,7 +1770,7 @@
         ${travel.budget > 0 ? `
         <div class="travel-card-budget">
           <div>預算 $${fmt(travel.budget)}</div>
-          <div style="color:${tOver ? '#fde68a' : 'rgba(255,255,255,.9)'}">${tOver ? '⚠️ 超支' : '剩餘'} $${fmt(Math.abs(tRemaining))}</div>
+          <div style="color:${tOver ? '#fde68a' : 'rgba(255,255,255,.9)'}">${tOver ? '超支!' : '剩餘'} $${fmt(Math.abs(tRemaining))}</div>
         </div>` : ''}
       </div>
       ${tPct !== null ? `
