@@ -274,7 +274,14 @@ function webScanReceiptItems(token, base64, mimeType) {
   const username = CacheService.getScriptCache().get('web_' + token);
   if (!username) return { success: false, error: '請重新登入' };
   try {
-    const parsed = parseReceiptItemsWithGeminiVision(base64, mimeType || 'image/jpeg');
+    // 旅遊模式：帶入已存的匯率，讓 Gemini 使用精確數字而非估算
+    const travelCurrency = AppProps.getProperty('travel_currency');
+    const travelRate = AppProps.getProperty('travel_rate');
+    const parsed = parseReceiptItemsWithGeminiVision(
+      base64, mimeType || 'image/jpeg',
+      travelCurrency || null,
+      travelRate ? parseFloat(travelRate) : null
+    );
     if (!parsed || !parsed.items || parsed.items.length === 0) {
       return { success: false, error: '無法識別明細，請確認圖片清晰並重試' };
     }

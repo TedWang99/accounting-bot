@@ -1068,6 +1068,129 @@
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
+
+    /* Quick-add panel */
+    .quick-add-panel {
+      padding: 10px 0 4px;
+      margin-bottom: 4px;
+    }
+
+    .quick-add-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: .5px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .quick-add-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .qa-chip {
+      padding: 7px 13px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--card);
+      font-size: 13px;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+      white-space: nowrap;
+    }
+
+    .qa-chip:active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    /* Calendar view */
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+
+    .cal-header-cell {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      padding: 4px 0;
+    }
+
+    .cal-cell {
+      border-radius: 8px;
+      padding: 6px 3px;
+      text-align: center;
+      cursor: pointer;
+      min-height: 50px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      transition: background .15s;
+    }
+
+    .cal-cell:hover {
+      background: var(--input-bg);
+    }
+
+    .cal-cell.has-data {
+      background: rgba(37, 99, 235, .08);
+    }
+
+    .cal-cell.selected {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .cal-cell.today .cal-day {
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .cal-cell.selected .cal-day,
+    .cal-cell.selected .cal-amt {
+      color: #fff;
+    }
+
+    .cal-day {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .cal-amt {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .cal-cell.selected .cal-amt {
+      color: rgba(255, 255, 255, .8);
+    }
+
+    .cal-cell.high .cal-amt {
+      color: #f59e0b;
+    }
+
+    .view-toggle-btn {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 3px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text);
+      margin-left: auto;
+    }
   </style>
 </head>
 
@@ -1154,6 +1277,13 @@
       <div id="scan-status" class="scan-status" style="display:none">
         <img id="scan-preview" class="scan-preview" alt="">
         <div id="scan-msg" class="scan-msg"></div>
+      </div>
+      <!-- 快速記帳面板 -->
+      <div class="quick-add-panel">
+        <div class="quick-add-label">⚡ 快速記帳</div>
+        <div class="quick-add-chips" id="quick-add-chips">
+          <!-- 由 JS 動態產生 -->
+        </div>
       </div>
       <div class="form-group"><label>品名 *</label><input type="text" id="add-item" placeholder="例：全聯、早餐"
           autocapitalize="none"></div>
@@ -1281,10 +1411,12 @@
       batchMode: false,
       selectedRows: new Set(),
       dupChecked: false,
-      chartMode: 'pie',   // 'pie' | 'trend'
+      chartMode: 'pie',
       trendData: null,
       pieChart: null,
-      trendChart: null
+      trendChart: null,
+      calView: false,    // 是否顯示日曆
+      calDay: null       // 選中的日期 (MM/dd 格式)
     };
 
     // ── Helpers ─────────────────────────────────────
@@ -1424,7 +1556,7 @@
       $('header-user').textContent = S.name;
       $('month-label').textContent = `${S.year}年${S.month}月`;
       $('dashboard-content').innerHTML = '<div class="empty-state">載入資料中…</div>';
-      S.filterKw = ''; S.filterCat = ''; S.filterPerson = '';
+      S.filterKw = ''; S.filterCat = ''; S.filterPerson = ''; S.filterProject = ''; S.calDay = null;
       try {
         const res = await run('webGetMonthData', S.token, S.year, S.month);
         if (!res.success) { $('dashboard-content').innerHTML = `<div class="empty-state">❌ ${res.error}</div>`; return; }
@@ -1487,7 +1619,12 @@
 
       // Filter bar
       h += `
-  <div class="section-title">明細（<span id="record-count">${d.records.length}</span> 筆）<span class="section-toggle" onclick="exportCSV()">📤 匯出 CSV</span><button id="btn-batch-toggle" class="btn-batch-mode">選取</button></div>
+  <div class="section-title" style="display:flex;align-items:center;gap:6px">
+    明細（<span id="record-count">${d.records.length}</span> 筆）
+    <span class="section-toggle" onclick="exportCSV()">📤 匯出 CSV</span>
+    <button id="btn-batch-toggle" class="btn-batch-mode">選取</button>
+    <button class="view-toggle-btn" id="btn-cal-toggle">${S.calView ? '📋 列表' : '📅 日曆'}</button>
+  </div>
   <div class="filter-bar">
     <input type="text" id="filter-kw" placeholder="🔍 搜尋品名…" value="${S.filterKw}">
     <select id="filter-cat"><option value="">全部分類</option>${catOptions}</select>
@@ -1513,12 +1650,27 @@
         personEl.addEventListener('change', () => { S.filterPerson = personEl.value; renderRecords(); });
       }
 
-      // 填入專案選項（從資料動態取得全部專案）
+      // 填入專案選項
       if (projectEl && S.data) {
         const projects = [...new Set(S.data.records.map(r => r.project).filter(Boolean))].sort();
         projects.forEach(p => { if (!projectEl.querySelector(`option[value="${p}"]`)) projectEl.add(new Option(p, p)); });
         projectEl.value = S.filterProject;
         projectEl.addEventListener('change', () => { S.filterProject = projectEl.value; renderRecords(); });
+      }
+
+      // 日曆視圖切換
+      const calToggle = $('btn-cal-toggle');
+      if (calToggle) {
+        calToggle.addEventListener('click', () => {
+          S.calView = !S.calView;
+          S.calDay = null;
+          $('dashboard-content').innerHTML = buildDashboardHTML(S.data);
+          bindFilterEvents();
+          renderPieChart(S.data.categoryBreakdown);
+          if (S.chartMode === 'trend') loadTrendChart();
+          if (S.calView) renderCalendar();
+          else renderRecords();
+        });
       }
 
       // 批次選取按鈕
@@ -1529,7 +1681,85 @@
       tabPie && tabPie.addEventListener('click', () => { S.chartMode = 'pie'; switchChartTab(); renderPieChart(S.data.categoryBreakdown); });
       tabTrend && tabTrend.addEventListener('click', () => { S.chartMode = 'trend'; switchChartTab(); loadTrendChart(); });
 
-      renderRecords();
+      if (S.calView) renderCalendar();
+      else renderRecords();
+    }
+
+    // ── Calendar View ─────────────────────────────────
+    function renderCalendar() {
+      const wrap = $('records-wrap');
+      if (!wrap || !S.data) return;
+      const today = new Date();
+      const todayStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+
+      // 建立日 → 金額 Map
+      const dayMap = {};
+      S.data.records.forEach(r => {
+        if (!dayMap[r.date]) dayMap[r.date] = 0;
+        if (r.amount > 0) dayMap[r.date] += r.amount;
+      });
+      const maxDay = Math.max(1, ...Object.values(dayMap));
+
+      // 取得該月第一天星期幾和天數
+      const firstDay = new Date(S.year, S.month - 1, 1).getDay();
+      const daysInMonth = new Date(S.year, S.month, 0).getDate();
+
+      let html = '<div class="cal-grid">';
+      ['日', '一', '二', '三', '四', '五', '六'].forEach(d => {
+        html += `<div class="cal-header-cell">${d}</div>`;
+      });
+      // 空白格
+      for (let i = 0; i < firstDay; i++) html += '<div class="cal-cell"></div>';
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${String(S.month).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
+        const amt = dayMap[dateStr] || 0;
+        const isToday = (S.year === today.getFullYear() && dateStr === todayStr);
+        const isSelected = S.calDay === dateStr;
+        const isHigh = amt > 5000;
+        let cls = 'cal-cell';
+        if (amt > 0) cls += ' has-data';
+        if (isToday) cls += ' today';
+        if (isSelected) cls += ' selected';
+        if (isHigh) cls += ' high';
+        html += `<div class="${cls}" data-date="${dateStr}">
+          <span class="cal-day">${day}</span>
+          ${amt > 0 ? `<span class="cal-amt">$${Math.round(amt / 100) * 100 >= 1000 ? (Math.round(amt / 1000)) + 'k' : Math.round(amt)}</span>` : ''}
+        </div>`;
+      }
+      html += '</div>';
+      // 選中日的明細
+      if (S.calDay) {
+        const dayRecords = S.data.records.filter(r => r.date === S.calDay);
+        html += `<div style="font-size:13px;color:var(--muted);padding:4px 0 8px">${S.calDay} 的明細</div>`;
+        html += `<div class="records-list">${dayRecords.map(r => {
+          const cardBadge = r.card ? `・${r.card}` : '';
+          return `<div class="record-item" data-row="${r.rowIndex}" data-item="${escHtml(r.item)}" data-amount="${r.amount}" data-payment="${escHtml(r.payment)}" data-category="${escHtml(r.category)}" data-card="${escHtml(r.card)}" data-date="${S.year}-${r.date.replace('/', '-')}" data-person="${escHtml(r.person)}">
+            <div class="record-date">${r.date}</div>
+            <div class="record-info">
+              <div class="record-item-name">${escHtml(r.item)}</div>
+              <div class="record-meta">${r.category}・${r.payment}${cardBadge}・${r.person}</div>
+            </div>
+            <div class="record-amount ${r.amount < 0 ? 'neg' : 'pos'}">${r.amount < 0 ? '-' : ''}$${fmt(Math.abs(r.amount))}</div>
+            <button class="record-del" data-row="${r.rowIndex}" onclick="event.stopPropagation()">🗑</button>
+          </div>`;
+        }).join('')}</div>`;
+      }
+      wrap.innerHTML = html;
+      // 綁定日期 click
+      wrap.querySelectorAll('.cal-cell[data-date]').forEach(cell => {
+        cell.addEventListener('click', () => {
+          const d = cell.dataset.date;
+          S.calDay = (S.calDay === d) ? null : d; // 再次點擊取消
+          renderCalendar();
+        });
+      });
+      wrap.querySelectorAll('.record-item').forEach(el => {
+        el.addEventListener('click', () => openEditSheet(el));
+      });
+      wrap.querySelectorAll('.record-del').forEach(btn => {
+        btn.addEventListener('click', e => { e.stopPropagation(); confirmDelete(parseInt(btn.dataset.row)); });
+      });
+      $('record-count') && ($('record-count').textContent = S.data.records.length);
     }
 
     function switchChartTab() {
@@ -1725,6 +1955,19 @@
     });
 
     // ── Add Form ─────────────────────────────────────
+    // 快速記帳預設品名
+    const QUICK_ADD_PRESETS = [
+      { label: '停車費', item: '停車費', amount: 30, category: '交通' },
+      { label: '加油 ⛽', item: '加油', amount: 0, category: '汽車機車' },
+      { label: '全聯 🛒', item: '全聯買菜', amount: 0, category: '日常用品' },
+      { label: '便當 🍱', item: '便當', amount: 0, category: '飲食' },
+      { label: '咖啡 ☕', item: '咖啡', amount: 0, category: '飲料' },
+      { label: '早餐 🥚', item: '早餐', amount: 0, category: '飲食' },
+      { label: '飲料 🧋', item: '飲料', amount: 0, category: '飲料' },
+      { label: '水電 💡', item: '水電費', amount: 0, category: '水電瓦斯' },
+      { label: '醫療 🏥', item: '醫療費', amount: 0, category: '醫療保健' },
+    ];
+
     async function loadConfig() {
       if (S.config) return;
       const cfg = await run('webGetConfig');
@@ -1748,6 +1991,24 @@
       if (cfg.persons && cfg.persons.length) {
         const el = $('edit-person');
         cfg.persons.forEach(p => el.add(new Option(p, p)));
+      }
+
+      // 快速記帳按鈕
+      const chipsWrap = $('quick-add-chips');
+      if (chipsWrap) {
+        chipsWrap.innerHTML = QUICK_ADD_PRESETS.map((p, i) =>
+          `<button class="qa-chip" data-idx="${i}">${p.label}</button>`
+        ).join('');
+        chipsWrap.querySelectorAll('.qa-chip').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const p = QUICK_ADD_PRESETS[parseInt(btn.dataset.idx)];
+            $('add-item').value = p.item;
+            if (p.amount > 0) $('add-amount').value = p.amount;
+            const catSel = $('add-category');
+            if (catSel) catSel.value = p.category;
+            $('add-item').focus();
+          });
+        });
       }
     }
 

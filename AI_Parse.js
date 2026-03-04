@@ -1,15 +1,20 @@
 // ============================================
-// AI_Parse - LINE 家庭記帳機器人 v8.0
+// AI_Parse - LINE 家庭記帳機器人 v8.1
 // ============================================
 
 // ============================================
 // [v8.0] 逐項明細掃描：每個商品獨立記錄
 // ============================================
-function parseReceiptItemsWithGeminiVision(base64Image, mimeType) {
+function parseReceiptItemsWithGeminiVision(base64Image, mimeType, knownCurrency, knownRate) {
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${CONFIG.GEMINI_API_KEY}`;
     const categoryList = CONFIG.CATEGORIES.join('、');
     const todayStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'yyyy-MM-dd');
+
+    // 若旅遊模式已設定匯率，直接注入 prompt，不讓 Gemini 自行估算
+    const rateInstruction = (knownCurrency && knownRate && knownCurrency !== 'TWD')
+      ? `2. 幣別換算：本收據為 ${knownCurrency}，請使用匯率 1 ${knownCurrency} = ${knownRate} TWD 換算成台幣（已由旅遊模式取得當日匯率，不要自行估算）。exchange_rate 填 ${knownRate}。`
+      : `2. 幣別換算：若為外幣（如 JPY），請估算当前匯率換算成台幣。若為 TWD 則 exchange_rate 為 1。`;
 
     const prompt = `你是專業的家庭記帳助理。請從這張收據圖片中，識別出「每一條商品明細」，並個別記錄為獨立項目。
 
@@ -18,7 +23,7 @@ function parseReceiptItemsWithGeminiVision(base64Image, mimeType) {
 
 【規則】
 1. 品名翻譯：若為日文或外文，請翻譯成台灣慣用繁體中文。知名品牌（如 DHC、LYSOL、GATSBY）保留英文。
-2. 幣別換算：若為外幣（如 JPY），請估算当前匯率換算成台幣。若為 TWD 則 exchange_rate 為 1。
+${rateInstruction}
 3. 個別分類：每一項商品都要根據內容個別判斷分類，不要統一套用同一個分類。
 4. 折扣/COUPON：若有折扣行，price_original 為負數，category 填「折扣回饋」。
 5. 小計/合計行：不要記錄，因為它不是獨立商品。
@@ -30,8 +35,8 @@ function parseReceiptItemsWithGeminiVision(base64Image, mimeType) {
 {
   "store": "店家名稱（繁體中文）",
   "date": "YYYY-MM-DD",
-  "currency": "TWD 或 JPY 等",
-  "exchange_rate": 1,
+  "currency": "${knownCurrency || 'TWD 或 JPY 等'}",
+  "exchange_rate": ${knownRate || 1},
   "payment": "現金或信用卡",
   "card_last4": "1234（選填）",
   "items": [

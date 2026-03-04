@@ -1,5 +1,5 @@
 // ============================================
-// Main - LINE 家庭記帳機器人 v7.8
+// Main - LINE 家庭記帳機器人 v8.1
 // ============================================
 
 function onOpen() {
@@ -164,6 +164,7 @@ function handleCommand(userMessage, userName) {
   if (/^(查固定|查詢固定)/.test(msg)) return handleQueryFixedSchedule(userMessage);
   if (/^(查預算|預算狀態|預算表)/.test(msg)) return handleQueryBudgets(userMessage);
   if (/^(查分類預算|分類預算)/.test(msg)) return handleQueryCategoryBudgets(); // [v7.8]
+  if (/^(設定預算|設預算|加預算|修改預算)/.test(msg)) return handleSetCategoryBudget(userMessage); // [v8.1]
 
   // [v6.0 新增] 支援「指定月份」或「上個月」的報表查詢
   const monthMatch = msg.match(/^(?:([1-9]|1[0-2])|上個?)\s*(?:月|月份)\s*的?\s*(報表|月報|查詢|統計|總計|分類)$/);
@@ -345,8 +346,8 @@ function handleUpdateLastEntryCard(userMessage, userName) {
     const msgLower = userMessage.toLowerCase();
     for (const [key, info] of Object.entries(cardsMap)) {
       if (msgLower.includes(info.bank.toLowerCase()) ||
-          msgLower.includes(key.toLowerCase()) ||
-          (info.last4 && msgLower.includes(info.last4))) {
+        msgLower.includes(key.toLowerCase()) ||
+        (info.last4 && msgLower.includes(info.last4))) {
         matchedCardKey = key;
         break;
       }
@@ -427,5 +428,63 @@ function confirmBatchCardTag(userMessage, userName) {
   } catch (error) {
     logError('confirmBatchCardTag', error);
     return { status: 'error', message: '❌ 整批標記失敗：' + error.toString() };
+  }
+}
+
+// [v8.1] 設定分類預算
+function handleSetCategoryBudget(userMessage) {
+  try {
+    // 解析指令，例如 "設定預算 飲食 5000" 或 "設定預算 飲食 0" (代表刪除該預算)
+    // 支援格式：設定預算 [分類] [金額]
+    const match = userMessage.match(/^(?:設定預算|設預算|加預算|修改預算)\s+([\s\S]+?)\s+(\d+)$/i);
+    if (!match) {
+      return {
+        status: 'error',
+        message: '⚠️ 格式錯誤！\n正確格式：設定預算 [分類] [金額]\n例如：設定預算 飲食 5000\n（若金額設為 0 則代表取消該分類預算）'
+      };
+    }
+
+    const category = match[1].trim();
+    const amount = parseInt(match[2], 10);
+
+    // 驗證分類是否在清單中
+    if (!CONFIG.CATEGORIES.includes(category)) {
+      return {
+        status: 'error',
+        message: `⚠️ 找不到分類「${category}」！\n可用分類：\n${CONFIG.CATEGORIES.join('、')}`
+      };
+    }
+
+    // 讀取現有預算
+    const currentBudgets = CONFIG.CATEGORY_BUDGETS;
+
+    if (amount <= 0) {
+      // 刪除該預算
+      if (currentBudgets[category] !== undefined) {
+        delete currentBudgets[category];
+        AppProps.setProperty('CATEGORY_BUDGETS', JSON.stringify(currentBudgets));
+        return {
+          status: 'success',
+          message: `✅ 已取消分類「${category}」的預算提醒！`
+        };
+      } else {
+        return {
+          status: 'success',
+          message: `ℹ️ 分類「${category}」本來就沒有設定預算喔！`
+        };
+      }
+    } else {
+      // 設定或更新預算
+      currentBudgets[category] = amount;
+      AppProps.setProperty('CATEGORY_BUDGETS', JSON.stringify(currentBudgets));
+      const lineSep = '━━━━━━━━━━';
+      return {
+        status: 'success',
+        message: `✅ 設定分類預算成功！\n${lineSep}\n📂 分類：${category}\n💰 每月上限：${formatCurrency(amount)}`
+      };
+    }
+  } catch (error) {
+    logError('handleSetCategoryBudget', error);
+    return { status: 'error', message: '❌ 設定分類預算失敗：' + error.toString() };
   }
 }
