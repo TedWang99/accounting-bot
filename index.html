@@ -2104,9 +2104,8 @@
           : '本月尚無記帳資料'}</div>`; return;
       }
       wrap.innerHTML = `<div class="records-list${S.batchMode ? ' batch-active' : ''}">${filtered.map(r => {
-        const isNeg = r.amount < 0; const cardBadge = r.card ? `・${r.card}` : ''; const
-          isSelected = S.selectedRows.has(r.rowIndex); const fullDate = `${S.year}-${r.date.replace('/', '-')}`; return
-        `<div class="record-item${isSelected ? ' selected' : ''}" data-row="${r.rowIndex}"
+        const isNeg = r.amount < 0; const cardBadge = r.card ? `・${r.card}` : ''; const isSelected = S.selectedRows.has(r.rowIndex); const fullDate = `${S.year}-${r.date.replace('/', '-')}`;
+        return `<div class="record-item${isSelected ? ' selected' : ''}" data-row="${r.rowIndex}"
           data-item="${escHtml(r.item)}" data-amount="${r.amount}" data-payment="${escHtml(r.payment)}"
           data-category="${escHtml(r.category)}" data-card="${escHtml(r.card)}" data-date="${fullDate}"
           data-person="${escHtml(r.person)}">
