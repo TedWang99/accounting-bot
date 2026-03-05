@@ -2054,7 +2054,7 @@
           <div class="record-item-name">${escHtml(r.item)}</div>
           <div class="record-meta">${r.category}・${r.payment}${cardBadge}・${r.person}</div>
         </div>
-        <div class="record-amount ${r.amount < 0 ? 'neg' : 'pos'}">${r.amount < 0 ? '-' : ''
+        <div class="record-amount ${(r.amount < 0 || r.category === '工資' || r.category === '收入') ? 'neg' : 'pos'}">${(r.amount < 0 || r.category === '工資' || r.category === '收入') ? '+' : ''
             }$${fmt(Math.abs(r.amount))}</div>
             <button class="record-del" data-row="${r.rowIndex}" onclick="event.stopPropagation()">🗑</button>
         </div>`;
@@ -2115,7 +2115,7 @@
             <div class="record-item-name">${escHtml(r.item)}</div>
             <div class="record-meta">${r.category}・${r.payment}${cardBadge}・${r.person}</div>
           </div>
-          <div class="record-amount ${isNeg ? 'neg' : 'pos'}">${isNeg ? '-' : ''}$${fmt(Math.abs(r.amount))}</div>
+          <div class="record-amount ${(r.amount < 0 || r.category === '工資' || r.category === '收入') ? 'neg' : 'pos'}">${(r.amount < 0 || r.category === '工資' || r.category === '收入') ? '+' : ''}$${fmt(Math.abs(r.amount))}</div>
           ${S.batchMode ? '' : `<button class="record-del" data-row="${r.rowIndex}"
             onclick="event.stopPropagation()">🗑</button>`}
       </div>`;
@@ -2196,7 +2196,7 @@
           labels,
           datasets: [{
             label: `${S.year}年月支出`, data: S.trendData, backgroundColor: labels.map((_, i) => i === S.month - 1 ?
-              '#2563eb' : '#93c5fd'), borderRadius: 6
+              '#ef4444' : '#fca5a5'), borderRadius: 6
           }]
         },
         options: {

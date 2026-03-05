@@ -103,8 +103,12 @@ function webGetMonthData(token, year, month) {
       records.push({ date: dateStr, item, amount, person, payment, category, project, card, rowIndex: i + 1 });
 
       if (amount >= 0) {
-        totalExpense += amount;
-        categoryMap[category] = (categoryMap[category] || 0) + amount;
+        if (category === '工資' || category === '收入') {
+          totalIncome += amount;
+        } else {
+          totalExpense += amount;
+          categoryMap[category] = (categoryMap[category] || 0) + amount;
+        }
       } else {
         totalIncome += Math.abs(amount);
       }
@@ -154,7 +158,10 @@ function webGetYearSummary(token, year) {
       }
       if (rowDate.getFullYear() !== parseInt(year)) continue;
       const amount = parseFloat(row[2]) || 0;
-      if (amount > 0) monthlyTotals[rowDate.getMonth()] += amount;
+      const category = String(row[5] || '');
+      if (amount > 0 && category !== '工資' && category !== '收入') {
+        monthlyTotals[rowDate.getMonth()] += amount;
+      }
     }
     return { success: true, monthlyTotals };
   } catch (e) {
