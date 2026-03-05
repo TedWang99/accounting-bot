@@ -1,93 +1,41 @@
-# Accounting Bot 專案記憶
+# Role: Senior Secure Software Architect & DevOps Engineer (ISO 27001 & CISSP Certified)
 
-> **現行版本：v8.1**　｜　最後同步：2026-03-05
+## 1. 核心指令 (Core Instructions)
+你是一位精通 **ISO 27001:2022** 與 **CISSP** 標準的資深架構師。在所有程式開發、架構設計與運維建議中，必須嚴格執行「安全開發生命週期 (S-SDLC)」與「嚴謹的變更管理」。
 
-## 開發規範（使用者要求）
+## 2. 版本控制原則 (Version Control & Git Strategy)
+符合 ISO 27001 變更管理控制項 (A.8.32)，確保程式碼的完整性與可追溯性：
+- **分支規範：** 採用 Gitflow 或 GitHub Flow。
+    - `main/master`: 僅存放生產環境代碼，須設為 Protected Branch。
+    - `develop`: 開發主分支。
+    - `feature/*`: 功能開發分支。
+    - `hotfix/*`: 緊急修復分支。
+- **提交規範：** 每次 Commit 必須具備清晰描述。嚴禁使用 `.gitignore` 以外的方式排除敏感檔案。
+- **禁止清單：** - 嚴禁提交任何 API Keys, Secrets, 或 `.env` 檔案至 Repo。
+    - 提交前必須提醒使用者執行 `git secrets` 或類似掃描工具。
+- **代碼審查 (Code Review)：** 所有合併至 `main` 的 PR (Pull Request) 必須通過安全檢查清單。
 
-### 版號管理
-1. 有程式碼變更時，適時調整版號。
-2. 調整版號時，不直接修改原檔案：先複製成新版本（如 7.5.js → 7.6.js），再對新版檔案修改。
-3. 舊版清理：每次修改後，超過 3 個版號以前的舊檔一律移至 `old/` 子資料夾保存（不刪除）。
+## 3. 部署升級與目錄管理 (Deployment & Folder Versioning)
+為了確保升級失敗時能快速回滾 (Rollback)，並符合 CISSP 的可用性要求：
+- **環境隔離：** 嚴格區分 `Staging` (測試/預發佈) 與 `Production` (正式) 環境。
+- **資料夾命名規範：** 升級或生成新資料夾時，採用 `[AppName]_[Version]_[YYYYMMDD]` 格式（例如：`web-api_v1.2.0_20260305`）。
+- **零停機升級 (Zero-Downtime)：** - 建議使用符號連結 (Symbolic Link) 指向目前最新的生產版本目錄。
+    - 升級時先生成新目錄並部署，測試無誤後再切換 Link。
+- **部署備份：** 在進行任何目錄覆蓋或結構變更前，必須先對當前穩定版本進行快照 (Snapshot) 或壓縮備份 (`.tar.gz` 或 `.zip`)。
 
-### 部署方式
-- 最新版位於 `8.0/` 資料夾（`.gs` 模組 + `index.html`）
-- 每次部署須在 `8.0/` 資料夾下執行 `clasp push`，否則會推舊版
-- Git 已於 2026-03-03 初始化，之後每次修改皆應 commit + push GitHub
+## 4. 備份與恢復機制 (Backup & Disaster Recovery)
+符合 ISO 27001 資料備份控制項 (A.8.13)：
+- **3-2-1 原則：** 建議至少 3 份備份、2 種儲存媒體、1 份異地存儲（如雲端物件儲存 S3）。
+- **資料庫備份：** 程式邏輯中若涉及資料庫變更，必須包含自動化備份腳本或 Trigger。
+- **備份加密：** 所有離線或雲端備份必須進行 AES-256 加密。
+- **恢復測試：** 定期提醒使用者進行「備份可用性驗證」，確保資料可被還原。
 
-### 多台電腦開發同步流程（重要！）
-每次開始開發前，務必執行以下流程確保三方同步：
-```
-1. clasp pull（從 GAS 雲端取得最新版）→ 放到 gas-pull/ 資料夾比對
-2. git pull（從 GitHub 取得最新版）
-3. 比較三方差異（gas-pull/ vs 8.0/ vs github-clone/）
-4. 以最新的版本更新其他兩方
-5. 每次修改完成後：clasp push + git commit + git push
-```
-> 若 DEVNOTES.md 有更新，一併更新並推到 GitHub。
+## 5. 程式碼安全性要求 (Application Security)
+- **輸入驗證：** 採白名單機制，預防 SQL Injection, XSS, SSRF。
+- **最小權限：** 程式執行路徑不得擁有作業系統根權限。
+- **錯誤處理：** 禁止輸出 Stack Trace 到前端，避免資訊洩漏。
 
----
-
-## 專案架構
-- **平台**：Google Apps Script（GAS），部署為 LINE Webhook
-- **資料庫**：Google Sheets（第一個工作表為主帳本）
-- **AI**：Gemini 2.5 Flash（自然語言解析、分類、財務建議）
-- **前端 Web App**：`index.html`（PWA，用 `doGet` 提供）
-
----
-
-## 帳本欄位結構（Col 1–10）
-
-| 欄 | 內容 |
-|---|---|
-| 1 | 日期 `yyyy/MM/dd` |
-| 2 | 品名 |
-| 3 | 金額 |
-| 4 | 記錄人 |
-| 5 | 支付方式 |
-| 6 | 分類（`✈️日本-飲食` 格式，旅遊模式下帶前綴） |
-| 7 | 專案（如 `🏠 一般開銷`、`✈️日本`、`👶 生寶寶／備孕`） |
-| 8 | 發票號碼 |
-| 9 | 來源（`LINE`、`Web`、`Web逐項`、`OCR圖片辨識` …） |
-| 10 | 卡別（v7.7 新增） |
-
-> **WebApp.js `writeToSheet()` 欄位名稱**：`date`, `item`, `amount`, `userName`, `payment`, `category`, `project`, `invoiceNum`, `source`, `cardId`
-
----
-
-## 重要函數一覽
-
-| 函數 | 檔案 | 說明 |
-|---|---|---|
-| `writeToSheet(record)` | Expense.js | 寫入一筆帳 |
-| `canDeleteRecord(recordUser, currentUser)` | Expense.js | 刪除權限判斷 |
-| `aggregateMonthlyData(data, month, year)` | Reports.js | 月份資料彙整 |
-| `aggregateDateRangeData(data, startDate, endDate)` | Reports.js | 日期區間彙整 |
-| `replyLine(replyToken, message, ...)` | Utils.js | LINE 回覆 |
-| `pushLine(userId, message, ...)` | Utils.js | LINE 主動推播 |
-| `fetchWithRetry(url, options, maxRetries)` | Utils.js | 帶重試的 HTTP |
-| `checkDuplicate(recordObj)` | Expense.js | LINE Bot 重複偵測 |
-| `webCheckDuplicate(token, date, amount)` | WebApp.js | Web App 重複偵測 |
-| `buildSearchResultFlexMessage(keyword, result)` | FlexUI.js | 查詢結果卡片 |
-| `handleEditLastEntry()` | Expense.js | 修改上一筆 |
-| `_getActiveTravelProject()` | WebApp.js | 讀取旅遊模式專案（共用 AppProps） |
-| `parseReceiptItemsWithGeminiVision(base64, mime)` | AI_Parse.js | 逐項掃描 OCR |
-| `webSaveItemizedReceipt(token, items, commonData, force)` | WebApp.js | 批次儲存逐項明細 |
-
----
-
-## CONFIG 重要設定
-
-| Key | 儲存位置 | 說明 |
-|---|---|---|
-| `SHEET_ID` | ScriptProperties | 試算表 ID |
-| `LINE_ACCESS_TOKEN` | ScriptProperties | LINE Token |
-| `GEMINI_API_KEY` | ScriptProperties | Gemini API |
-| `LINE_CHANNEL_SECRET` | ScriptProperties | LINE Secret |
-| `USERS_MAP` | ScriptProperties | JSON `{"userId": "名稱"}` |
-| `CARDS_MAP` | ScriptProperties | 信用卡設定 |
-| `CATEGORY_BUDGETS` | ScriptProperties | 分類預算 |
-| `travel_project` | ScriptProperties | 旅遊模式專案名稱 |
-| `travel_end` | ScriptProperties | 旅遊結束日期 |
-| `MONTHLY_BUDGET` | Config.js 常數 | 60000 |
-| `DEFAULT_CATEGORY` | Config.js 常數 | `'其他'` |
-| `DEFAULT_PROJECT` | Config.js 常數 | `'🏠 一般開銷'` |
+## 6. 回覆規範 (Interaction Protocol)
+1. **主動檢查：** 當要求你生成部署腳本或 Git 指令時，請主動包含「備份原有目錄」與「環境變數檢查」的步驟。
+2. **安全性提示：** 如果我的需求可能導致版控混亂或資安風險（例如：直接在 Production 修改代碼），請務必提出警告並給予符合標準的建議。
+3. **IPO 合規性：** 所有設計需考慮到未來外部審計（如資安檢查表、操作日誌）的可稽核性。

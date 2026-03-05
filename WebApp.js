@@ -70,8 +70,11 @@ function webGetMonthData(token, year, month) {
 
     const records = [];
     let totalExpense = 0;
-    let totalIncome = 0;
+    let actualIncome = 0;
+    let totalRebate = 0;
     const categoryMap = {};
+    const incomeMap = {};
+    const rebateMap = {};
     const targetYear = parseInt(year);
     const targetMonth = parseInt(month);
 
@@ -104,13 +107,20 @@ function webGetMonthData(token, year, month) {
 
       if (amount >= 0) {
         if (category === '工資' || category === '收入') {
-          totalIncome += amount;
+          actualIncome += amount;
+          incomeMap[category] = (incomeMap[category] || 0) + amount;
         } else {
           totalExpense += amount;
           categoryMap[category] = (categoryMap[category] || 0) + amount;
         }
       } else {
-        totalIncome += Math.abs(amount);
+        if (category === '工資' || category === '收入') {
+          actualIncome += Math.abs(amount);
+          incomeMap[category] = (incomeMap[category] || 0) + Math.abs(amount);
+        } else {
+          totalRebate += Math.abs(amount);
+          rebateMap[category] = (rebateMap[category] || 0) + Math.abs(amount);
+        }
       }
     }
 
@@ -121,16 +131,26 @@ function webGetMonthData(token, year, month) {
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 8);
 
+    const incomeBreakdown = Object.entries(incomeMap)
+      .map(([cat, amt]) => ({ category: cat, amount: amt }))
+      .sort((a, b) => b.amount - a.amount);
+
+    const rebateBreakdown = Object.entries(rebateMap)
+      .map(([cat, amt]) => ({ category: cat, amount: amt }))
+      .sort((a, b) => b.amount - a.amount);
+
     return {
       success: true,
       records,
       summary: {
-        totalExpense, totalIncome,
+        totalExpense, totalIncome: actualIncome, totalRebate,
         count: records.length,
         budget: CONFIG.MONTHLY_BUDGET,
         remaining: CONFIG.MONTHLY_BUDGET - totalExpense
       },
-      categoryBreakdown
+      categoryBreakdown,
+      incomeBreakdown,
+      rebateBreakdown
     };
   } catch (e) {
     return { success: false, error: '取得資料失敗：' + e.message };
@@ -145,6 +165,7 @@ function webGetYearSummary(token, year) {
     const sheet = SpreadsheetApp.openById(CONFIG.SHEET_ID).getSheets()[0];
     const data = sheet.getDataRange().getValues();
     const monthlyTotals = Array(12).fill(0);
+    const monthlyIncomes = Array(12).fill(0);
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
       if (!row[0]) continue;
@@ -159,11 +180,13 @@ function webGetYearSummary(token, year) {
       if (rowDate.getFullYear() !== parseInt(year)) continue;
       const amount = parseFloat(row[2]) || 0;
       const category = String(row[5] || '');
-      if (amount > 0 && category !== '工資' && category !== '收入') {
+      if (category === '工資' || category === '收入') {
+        monthlyIncomes[rowDate.getMonth()] += Math.abs(amount);
+      } else if (amount > 0) {
         monthlyTotals[rowDate.getMonth()] += amount;
       }
     }
-    return { success: true, monthlyTotals };
+    return { success: true, monthlyTotals, monthlyIncomes };
   } catch (e) {
     return { success: false, error: e.message };
   }

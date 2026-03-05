@@ -1735,7 +1735,7 @@
     }
 
     function buildDashboardHTML(d, travel) {
-      const { summary, categoryBreakdown } = d;
+      const { summary, categoryBreakdown, incomeBreakdown = [], rebateBreakdown = [] } = d;
       const pct = Math.min(100, Math.round(summary.totalExpense / summary.budget * 100));
       const isOver = summary.totalExpense > summary.budget;
       const rem = summary.budget - summary.totalExpense;
@@ -1794,8 +1794,8 @@
         </div>
         <div style="text-align:right">
           <div class="summary-label">共 ${summary.count} 筆</div>
-          ${summary.totalIncome > 0 ? `<div style="font-size:13px;color:var(--green);margin-top:2px">回饋
-            $${fmt(summary.totalIncome)}</div>` : ''}
+          ${summary.totalIncome > 0 ? `<div style="font-size:13px;color:var(--green);margin-top:2px">📥 收入 $${fmt(summary.totalIncome)}</div>` : ''}
+          ${summary.totalRebate > 0 ? `<div style="font-size:13px;color:var(--muted);margin-top:2px">🏷️ 回饋/退款 $${fmt(summary.totalRebate)}</div>` : ''}
         </div>
       </div>
       <div class="budget-bar-bg">
@@ -1834,6 +1834,31 @@
           </div>
         </div>
         <div class="cat-amt">$${fmt(c.amount)}</div>
+      </div>`;
+        });
+        h += `</div>`;
+      }
+
+      // Income & Rebate Breakdown
+      const incomeAndRebateBreakdown = [...incomeBreakdown.map(i => ({ ...i, type: 'income' })), ...rebateBreakdown.map(r => ({ ...r, type: 'rebate' }))].filter(c => c.amount > 0);
+      incomeAndRebateBreakdown.sort((a, b) => b.amount - a.amount);
+      if (incomeAndRebateBreakdown.length > 0) {
+        const maxI = incomeAndRebateBreakdown[0].amount;
+        h += `<div class="section-title" style="margin-top:16px;">收入與回饋明細</div>
+    <div class="cat-list">`;
+        incomeAndRebateBreakdown.forEach(c => {
+          const w = Math.round(c.amount / maxI * 100);
+          const isIncome = c.type === 'income';
+          const bgStr = isIncome ? 'linear-gradient(90deg, #22c55e, #16a34a)' : 'linear-gradient(90deg, #64748b, #475569)';
+          const colorStr = isIncome ? 'var(--green)' : 'var(--muted)';
+          h += `<div class="cat-item">
+        <div class="cat-name">${c.category}</div>
+        <div class="cat-bar-wrap">
+          <div class="cat-bar-bg">
+            <div class="cat-bar-fill" style="width:${w}%; background: ${bgStr}"></div>
+          </div>
+        </div>
+        <div class="cat-amt ${isIncome ? 'pos' : ''}" style="color: ${colorStr}">$${fmt(c.amount)}</div>
       </div>`;
         });
         h += `</div>`;
@@ -2181,8 +2206,10 @@
       if (!S.trendData) {
         try {
           const res = await run('webGetYearSummary', S.token, S.year);
-          if (res.success) S.trendData = res.monthlyTotals;
-          else {
+          if (res.success) {
+            S.trendData = res.monthlyTotals;
+            S.trendIncomeData = res.monthlyIncomes || Array(12).fill(0);
+          } else {
             canvas.parentElement.innerHTML = `<div style="text-align:center;color:var(--muted);padding:40px">載入失敗</div>`;
             return;
           }
@@ -2194,14 +2221,30 @@
         type: 'bar',
         data: {
           labels,
-          datasets: [{
-            label: `${S.year}年月支出`, data: S.trendData, backgroundColor: labels.map((_, i) => i === S.month - 1 ?
-              '#ef4444' : '#fca5a5'), borderRadius: 6
-          }]
+          datasets: [
+            {
+              label: `${S.year}年月支出`,
+              data: S.trendData,
+              backgroundColor: labels.map((_, i) => i === S.month - 1 ? '#ef4444' : '#fca5a5'),
+              borderRadius: 6
+            },
+            {
+              label: `${S.year}年月收入`,
+              data: S.trendIncomeData,
+              backgroundColor: labels.map((_, i) => i === S.month - 1 ? '#22c55e' : '#86efac'),
+              borderRadius: 6
+            }
+          ]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: { boxWidth: 12, font: { size: 11 } }
+            }
+          },
           scales: {
             y: { beginAtZero: true, ticks: { callback: v => '$' + (v / 1000).toFixed(0) + 'k', font: { size: 11 } } },
             x: { ticks: { font: { size: 11 } } }
