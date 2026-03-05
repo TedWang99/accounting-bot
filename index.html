@@ -1318,6 +1318,73 @@
       color: var(--muted);
       margin-top: 2px;
     }
+
+    /* Project Modal */
+    .project-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .project-modal-content {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .project-modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .project-modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .project-modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .project-modal-body {
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .project-summary-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .project-modal-body .cat-list {
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 
@@ -1328,6 +1395,19 @@
     <div style="color:#64748b;font-size:14px">載入中...</div>
   </div>
   <div id="toast"></div>
+
+  <!-- Project Summary Modal -->
+  <div class="project-modal" id="project-modal">
+    <div class="project-modal-content">
+      <div class="project-modal-header">
+        <div class="project-modal-title" id="pm-title">專案總覽</div>
+        <button class="project-modal-close" onclick="closeProjectSummaryModal()">×</button>
+      </div>
+      <div class="project-modal-body" id="pm-body">
+        <div style="text-align:center; padding: 40px; color: var(--muted);">載入中...</div>
+      </div>
+    </div>
+  </div>
 
   <!-- Login -->
   <div class="view" id="view-login">
@@ -1880,9 +1960,12 @@
       <select id="filter-person">
         <option value="">全部成員</option>
       </select>
-      <select id="filter-project">
-        <option value="">全部專案</option>
-      </select>
+      <div style="display:flex;align-items:center;gap:4px">
+        <select id="filter-project" style="flex:1">
+          <option value="">全部專案</option>
+        </select>
+        <button id="btn-project-summary" style="display:none; padding: 4px 8px; font-size: 13px; border-radius: 4px; border: 1px solid var(--primary); background: rgba(37,99,235,0.1); color: var(--primary); cursor: pointer; white-space: nowrap;">📊 跨月總覽</button>
+      </div>
     </div>
     <div id="records-wrap"></div>`;
 
@@ -1989,7 +2072,19 @@
         const projects = [...new Set(S.data.records.map(r => r.project).filter(Boolean))].sort();
         projects.forEach(p => { if (!projectEl.querySelector(`option[value="${p}"]`)) projectEl.add(new Option(p, p)); });
         projectEl.value = S.filterProject;
-        projectEl.addEventListener('change', () => { S.filterProject = projectEl.value; renderRecords(); });
+        projectEl.addEventListener('change', () => {
+          S.filterProject = projectEl.value;
+          renderRecords();
+          const btn = $('btn-project-summary');
+          if (btn) btn.style.display = projectEl.value ? 'inline-block' : 'none';
+        });
+        const btn = $('btn-project-summary');
+        if (btn) {
+          btn.style.display = projectEl.value ? 'inline-block' : 'none';
+          btn.onclick = () => {
+            if (projectEl.value) openProjectSummaryModal(projectEl.value);
+          };
+        }
       }
 
       // 日曆視圖切換
@@ -2776,6 +2871,114 @@
       a.href = url; a.download = `記帳_${S.year}年${S.month}月.csv`; a.click();
       URL.revokeObjectURL(url);
       toast('📤 CSV 已下載');
+    }
+
+    // ── Project Summary Modal ─────────────────────────
+    function closeProjectSummaryModal() {
+      $('project-modal').style.display = 'none';
+    }
+
+    async function openProjectSummaryModal(projectName) {
+      const modal = $('project-modal');
+      const pmBody = $('pm-body');
+      $('pm-title').textContent = projectName;
+      pmBody.innerHTML = '<div style="text-align:center; padding: 40px; color: var(--muted);">載入中...</div>';
+      modal.style.display = 'flex';
+
+      try {
+        const res = await run('webGetProjectSummary', S.token, projectName);
+        if (!res.success) {
+          pmBody.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--red);">${escHtml(res.error)}</div>`;
+          return;
+        }
+
+        const { summary, categoryBreakdown, incomeBreakdown = [], rebateBreakdown = [], records } = res;
+
+        // 渲染摘要
+        let h = `
+          <div class="project-summary-box">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+              <span style="color:var(--muted); font-size:13px;">歷史累計支出</span>
+              <span style="color:var(--red); font-weight:700; font-size:18px;">$${fmt(summary.totalExpense)}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:var(--muted); font-size:13px;">總筆數</span>
+              <span style="color:var(--text); font-size:14px;">${summary.count} 筆</span>
+            </div>`;
+
+        if (summary.totalIncome > 0) {
+          h += `
+            <div style="display:flex; justify-content:space-between; margin-top: 8px;">
+              <span style="color:var(--muted); font-size:13px;">歷史累計收入</span>
+              <span style="color:var(--green); font-size:14px;">+$${fmt(summary.totalIncome)}</span>
+            </div>`;
+        }
+        if (summary.totalRebate > 0) {
+          h += `
+            <div style="display:flex; justify-content:space-between; margin-top: 8px;">
+              <span style="color:var(--muted); font-size:13px;">歷史累計回饋/退款</span>
+              <span style="color:var(--muted-border); font-size:14px;">$${fmt(summary.totalRebate)}</span>
+            </div>`;
+        }
+        h += `</div>`;
+
+        // 渲染支出分類佔比
+        if (categoryBreakdown.length > 0) {
+          const maxAmt = categoryBreakdown[0].amount;
+          h += `<div class="section-title">支出分類佔比</div><div class="cat-list">`;
+          categoryBreakdown.forEach(c => {
+            const w = Math.round(c.amount / maxAmt * 100);
+            h += `<div class="cat-item">
+              <div class="cat-name">${c.category}</div>
+              <div class="cat-bar-wrap"><div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${w}%"></div></div></div>
+              <div class="cat-amt">$${fmt(c.amount)}</div>
+            </div>`;
+          });
+          h += `</div>`;
+        }
+
+        // 渲染收入與回饋佔比
+        const incomeAndRebateBreakdown = [...incomeBreakdown.map(i => ({ ...i, type: 'income' })), ...rebateBreakdown.map(r => ({ ...r, type: 'rebate' }))].filter(c => c.amount > 0);
+        incomeAndRebateBreakdown.sort((a, b) => b.amount - a.amount);
+        if (incomeAndRebateBreakdown.length > 0) {
+          const maxI = incomeAndRebateBreakdown[0].amount;
+          h += `<div class="section-title">收入與回饋明細</div><div class="cat-list">`;
+          incomeAndRebateBreakdown.forEach(c => {
+            const w = Math.round(c.amount / maxI * 100);
+            const isIncome = c.type === 'income';
+            const bgStr = isIncome ? 'linear-gradient(90deg, #22c55e, #16a34a)' : 'linear-gradient(90deg, #64748b, #475569)';
+            const colorStr = isIncome ? 'var(--green)' : 'var(--muted)';
+            h += `<div class="cat-item">
+              <div class="cat-name">${c.category}</div>
+              <div class="cat-bar-wrap"><div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${w}%; background: ${bgStr}"></div></div></div>
+              <div class="cat-amt ${isIncome ? 'pos' : ''}" style="color: ${colorStr}">$${fmt(c.amount)}</div>
+            </div>`;
+          });
+          h += `</div>`;
+        }
+
+        // 渲染逐筆明細
+        if (records.length > 0) {
+          h += `<div class="section-title" style="margin-top: 24px;">跨月逐筆明細</div>`;
+          h += `<div class="records-list">` + records.map(r => {
+            const isNeg = r.amount < 0 || r.category === '工資' || r.category === '收入';
+            const cardBadge = r.card ? `・${r.card}` : '';
+            return `<div class="record-item" style="cursor:default">
+              <div class="record-date">${r.date.substring(0, 10).replace(/\\/ / g, '-')}</div>
+              <div class="record-info">
+                <div class="record-item-name">${escHtml(r.item)}</div>
+                <div class="record-meta">${r.category}・${r.payment}${cardBadge}・${r.person}</div>
+              </div>
+              <div class="record-amount ${isNeg ? 'neg' : 'pos'}">${isNeg ? '+' : ''}$${fmt(Math.abs(r.amount))}</div>
+            </div>`;
+          }).join('') + `</div>`;
+        }
+
+        pmBody.innerHTML = h;
+
+      } catch (e) {
+        pmBody.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--red);">發生錯誤：${e.message}</div>`;
+      }
     }
 
     // ── Start ─────────────────────────────────────────

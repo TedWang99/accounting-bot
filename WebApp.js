@@ -192,6 +192,108 @@ function webGetYearSummary(token, year) {
   }
 }
 
+// ── 取得跨月專案總結資料（專案總覽視窗用）─────────
+function webGetProjectSummary(token, projectName) {
+  const username = CacheService.getScriptCache().get('web_' + token);
+  if (!username) return { success: false, error: '請重新登入' };
+  if (!projectName) return { success: false, error: '缺少專案名稱' };
+
+  try {
+    const sheet = SpreadsheetApp.openById(CONFIG.SHEET_ID).getSheets()[0];
+    const data = sheet.getDataRange().getValues();
+
+    const records = [];
+    let totalExpense = 0;
+    let actualIncome = 0;
+    let totalRebate = 0;
+    const categoryMap = {};
+    const incomeMap = {};
+    const rebateMap = {};
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row[0]) continue;
+
+      const project = String(row[6] || '');
+      // 只挑選符合該專案名稱的紀錄
+      if (project !== projectName) continue;
+
+      const dateVal = row[0];
+      let rowDate;
+      if (dateVal instanceof Date) {
+        rowDate = dateVal;
+      } else {
+        const parts = String(dateVal).split('/');
+        if (parts.length >= 2) {
+          rowDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parts[2] ? parseInt(parts[2]) : 1);
+        } else {
+          continue;
+        }
+      }
+
+      const dateStr = Utilities.formatDate(rowDate, CONFIG.TIMEZONE, 'yyyy/MM/dd');
+      const item = String(row[1] || '');
+      const amount = parseFloat(row[2]) || 0;
+      const person = String(row[3] || '');
+      const payment = String(row[4] || '');
+      const category = String(row[5] || '');
+      const card = String(row[9] || '');
+
+      records.push({ date: dateStr, item, amount, person, payment, category, project, card, rowIndex: i + 1 });
+
+      if (amount >= 0) {
+        if (category === '工資' || category === '收入') {
+          actualIncome += amount;
+          incomeMap[category] = (incomeMap[category] || 0) + amount;
+        } else {
+          totalExpense += amount;
+          categoryMap[category] = (categoryMap[category] || 0) + amount;
+        }
+      } else {
+        if (category === '工資' || category === '收入') {
+          actualIncome += Math.abs(amount);
+          incomeMap[category] = (incomeMap[category] || 0) + Math.abs(amount);
+        } else {
+          totalRebate += Math.abs(amount);
+          rebateMap[category] = (rebateMap[category] || 0) + Math.abs(amount);
+        }
+      }
+    }
+
+    records.sort((a, b) => b.date.localeCompare(a.date));
+
+    // 打包佔比給前端
+    const categoryBreakdown = Object.entries(categoryMap)
+      .map(([cat, amt]) => ({ category: cat, amount: amt }))
+      .sort((a, b) => b.amount - a.amount);
+
+    const incomeBreakdown = Object.entries(incomeMap)
+      .map(([cat, amt]) => ({ category: cat, amount: amt }))
+      .sort((a, b) => b.amount - a.amount);
+
+    const rebateBreakdown = Object.entries(rebateMap)
+      .map(([cat, amt]) => ({ category: cat, amount: amt }))
+      .sort((a, b) => b.amount - a.amount);
+
+    return {
+      success: true,
+      projectName,
+      records,
+      summary: {
+        totalExpense,
+        totalIncome: actualIncome,
+        totalRebate,
+        count: records.length
+      },
+      categoryBreakdown,
+      incomeBreakdown,
+      rebateBreakdown
+    };
+  } catch (e) {
+    return { success: false, error: '取得專案資料失敗：' + e.message };
+  }
+}
+
 // ── [v8.0] 取得目前有效的旅遊模式專案（與 LINE Bot 共用 AppProps）
 function _getActiveTravelProject() {
   try {
