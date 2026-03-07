@@ -2819,7 +2819,7 @@
         if (res.success) {
           const d = res.data;
           if (d.item) $('add-item').value = d.item;
-          if (d.amount) $('add-amount').value = Math.abs(d.amount);
+          if (d.amount) $('add-amount').value = d.amount;
           if (d.date) $('add-date').value = d.date;
           if (d.category && S.config && S.config.categories.includes(d.category))
             $('add-category').value = d.category;
