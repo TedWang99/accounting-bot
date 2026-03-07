@@ -2235,7 +2235,7 @@
             <div class="record-item-name">${escHtml(r.item)}</div>
             <div class="record-meta">${r.category}・${r.payment}${cardBadge}・${r.person}</div>
           </div>
-          <div class="record-amount ${(r.amount < 0 || r.category === '工資' || r.category === '收入') ? 'neg' : 'pos'}">${(r.amount < 0 || r.category === '工資' || r.category === '收入') ? '+' : ''}$${fmt(Math.abs(r.amount))}</div>
+          <div class="record-amount ${(r.amount < 0 || r.category === '工資' || r.category === '收入' || r.category === '折扣回饋') ? 'neg' : 'pos'}">${(r.amount < 0 || r.category === '工資' || r.category === '收入' || r.category === '折扣回饋') ? '+' : ''}$${fmt(Math.abs(r.amount))}</div>
           ${S.batchMode ? '' : `<button class="record-del" data-row="${r.rowIndex}"
             onclick="event.stopPropagation()">🗑</button>`}
       </div>`;
@@ -2961,7 +2961,7 @@
         if (records.length > 0) {
           h += `<div class="section-title" style="margin-top: 24px;">跨月逐筆明細</div>`;
           h += `<div class="records-list">` + records.map(r => {
-            const isNeg = r.amount < 0 || r.category === '工資' || r.category === '收入';
+            const isNeg = r.amount < 0 || r.category === '工資' || r.category === '收入' || r.category === '折扣回饋';
             const cardBadge = r.card ? `・${r.card}` : '';
             return `<div class="record-item" style="cursor:default">
               <div class="record-date">${r.date.substring(0, 10).split('/').join('-')}</div>
